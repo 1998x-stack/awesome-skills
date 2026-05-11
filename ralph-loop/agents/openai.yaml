@@ -1,0 +1,3 @@
+interface:
+  display_name: "Ralph Loop"
+  short_description: "Run objective outer-loop iteration for coding tasks"

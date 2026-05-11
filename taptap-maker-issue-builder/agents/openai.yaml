@@ -1,0 +1,5 @@
+interface:
+  display_name: "TapTap Maker Issue Builder"
+  short_description: "Turn messy TapTap Maker issues into concise Slack-ready escalation notes."
+  icon: "message-square"
+  brand_color: "#14B8A6"

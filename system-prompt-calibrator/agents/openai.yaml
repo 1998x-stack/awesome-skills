@@ -1,0 +1,5 @@
+interface:
+  display_name: "System Prompt Calibrator"
+  short_description: "Builds and audits effective system prompts."
+  icon: "system"
+  primary_color: "#00A67E"

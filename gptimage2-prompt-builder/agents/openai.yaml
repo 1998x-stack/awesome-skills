@@ -1,0 +1,3 @@
+interface:
+  display_name: "GPT Image 2 Prompt Builder"
+  short_description: "Builds high-fidelity Chinese prompts for GPT Image 2."

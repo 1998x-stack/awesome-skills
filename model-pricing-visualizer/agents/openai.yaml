@@ -1,0 +1,3 @@
+interface:
+  display_name: "Model Pricing Visualizer"
+  short_description: "Analyze AI pricing tables and generate comparison images."
