@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Visualizer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<style>
+:root {
+  --bg: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-sidebar: #1e293b;
+  --bg-sidebar-hover: #334155;
+  --bg-sidebar-active: #2563eb20;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --text-sidebar: #cbd5e1;
+  --text-sidebar-bright: #f1f5f9;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --topbar-bg: #ffffff;
+  --topbar-border: #e2e8f0;
+  --badge-bg: #eff6ff;
+  --badge-text: #2563eb;
+  --breadcrumb-bg: #ffffff;
+  --modal-overlay: rgba(0,0,0,0.5);
+  --modal-bg: #ffffff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+  --code-bg: #f1f5f9;
+  --transition: 0.2s ease;
+}
+
+html.dark {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-sidebar: #0f1120;
+  --bg-sidebar-hover: #1e293b;
+  --bg-sidebar-active: #2563eb20;
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-sidebar: #94a3b8;
+  --text-sidebar-bright: #e2e8f0;
+  --border: #334155;
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --topbar-bg: #1e293b;
+  --topbar-border: #334155;
+  --badge-bg: #1e3a5f;
+  --badge-text: #60a5fa;
+  --breadcrumb-bg: #1e293b;
+  --modal-overlay: rgba(0,0,0,0.7);
+  --modal-bg: #1e293b;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.4);
+  --code-bg: #0f172a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--topbar-border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  z-index: 100;
+  transition: background var(--transition), border-color var(--transition);
+}
+#topbar .logo { font-weight: 700; font-size: 16px; color: var(--primary); white-space: nowrap; margin-right: 8px; }
+#topbar .logo-small { display: none; }
+#search-wrap { flex: 1; max-width: 480px; position: relative; }
+#search-wrap input {
+  width: 100%;
+  height: 32px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+#search-wrap input:focus { border-color: var(--primary); }
+#search-wrap input::placeholder { color: var(--text-secondary); }
+#search-wrap .search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 14px;
+  pointer-events: none;
+}
+#theme-toggle {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition), border-color var(--transition);
+}
+#theme-toggle:hover { background: var(--bg-sidebar-hover); }
+
+/* Main layout */
+#app {
+  display: flex;
+  flex: 1;
+  margin-top: 48px;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+/* Sidebar */
+#sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--bg-sidebar);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right: 1px solid var(--topbar-border);
+  transition: background var(--transition);
+}
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+
+/* Tree */
+#tree { padding: 8px 0; }
+
+.tree-list { list-style: none; }
+
+/* Root node */
+.root-item {  }
+.root-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-sidebar-bright);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s;
+  gap: 6px;
+}
+.root-header:hover { background: var(--bg-sidebar-hover); }
+.root-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  color: var(--text-sidebar);
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+.root-arrow.expanded { transform: rotate(90deg); }
+.root-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Children container */
+.tree-children { display: none; }
+.tree-children.open { display: block; }
+
+/* Inner nodes (dirs, skills, files) */
+.inner-node { }
+
+.node-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px 4px 24px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--text-sidebar);
+  transition: background 0.15s, color 0.15s;
+  gap: 6px;
+}
+.node-header:hover { background: var(--bg-sidebar-hover); color: var(--text-sidebar-bright); }
+.node-header.active { background: var(--bg-sidebar-active); color: var(--text-sidebar-bright); }
+
+.dir-header { padding-left: 24px; }
+
+.skill-header .node-icon { font-size: 12px; }
+
+.file-header {
+  padding-left: 48px;
+  font-size: 12px;
+  color: var(--text-sidebar);
+  opacity: 0.75;
+  cursor: pointer;
+}
+.file-header:hover { opacity: 1; color: var(--text-sidebar-bright); }
+
+.node-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  color: var(--text-sidebar);
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+.node-arrow.expanded { transform: rotate(90deg); }
+
+.node-icon { flex-shrink: 0; font-size: 13px; line-height: 1; }
+.node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-sidebar);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* Content area */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  transition: background var(--transition);
+}
+#content::-webkit-scrollbar { width: 8px; }
+#content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+#content::-webkit-scrollbar-track { background: transparent; }
+
+/* Empty state */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px;
+}
+#empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+#empty-state h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+#empty-state p { font-size: 14px; max-width: 360px; line-height: 1.7; }
+
+/* Skill view */
+#skill-view { display: none; }
+
+/* Frontmatter card */
+#frontmatter-card {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 24px 32px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: background var(--transition), border-color var(--transition);
+}
+#frontmatter-card .fm-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+#frontmatter-card .fm-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+#frontmatter-card .fm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+#frontmatter-card .fm-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+#frontmatter-card .fm-path {
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: var(--text-secondary);
+}
+#frontmatter-card .fm-extra {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+#frontmatter-card .fm-extra-key {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 4px;
+}
+#frontmatter-card .fm-extra-val {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+/* Body content */
+#body-content {
+  padding: 24px 32px;
+  max-width: 900px;
+}
+#body-content h1 { font-size: 22px; font-weight: 700; margin: 24px 0 12px; color: var(--text); }
+#body-content h1:first-child { margin-top: 0; }
+#body-content h2 { font-size: 18px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
+#body-content h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; }
+#body-content p { margin: 0 0 12px; }
+#body-content ul, #body-content ol { margin: 0 0 12px; padding-left: 24px; }
+#body-content li { margin-bottom: 4px; }
+#body-content code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+#body-content pre {
+  margin: 0 0 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+}
+#body-content pre code {
+  background: none;
+  padding: 0;
+}
+#body-content blockquote {
+  margin: 0 0 12px;
+  padding: 8px 16px;
+  border-left: 3px solid var(--primary);
+  color: var(--text-secondary);
+  background: var(--code-bg);
+  border-radius: 0 6px 6px 0;
+}
+#body-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+#body-content th, #body-content td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+#body-content th { background: var(--code-bg); font-weight: 600; }
+#body-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+#body-content a { color: var(--primary); text-decoration: none; }
+#body-content a:hover { text-decoration: underline; }
+#body-content img { max-width: 100%; border-radius: 6px; }
+#body-content strong { font-weight: 600; }
+
+/* Files section */
+#files-section {
+  padding: 0 32px 32px;
+  max-width: 900px;
+}
+#files-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tree-item { }
+.file-dir-header, .file-leaf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 13px;
+  cursor: default;
+}
+.file-dir-header { cursor: pointer; color: var(--text); font-weight: 500; }
+.file-dir-header:hover { color: var(--primary); }
+.file-leaf {
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding-left: 20px;
+}
+.file-leaf:hover { color: var(--primary); }
+.file-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+.file-arrow.expanded { transform: rotate(90deg); }
+.file-icon { flex-shrink: 0; font-size: 13px; }
+.file-children { display: none; padding-left: 0; }
+.file-children.open { display: block; }
+
+/* Breadcrumb */
+#breadcrumb {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: var(--breadcrumb-bg);
+  border-top: 1px solid var(--topbar-border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  z-index: 100;
+  gap: 6px;
+  transition: background var(--transition), border-color var(--transition);
+}
+#breadcrumb .crumb { cursor: pointer; color: var(--text-secondary); }
+#breadcrumb .crumb:hover { color: var(--primary); }
+#breadcrumb .crumb-sep { color: var(--border); user-select: none; }
+#breadcrumb .crumb-current { color: var(--text); font-weight: 500; cursor: default; }
+#breadcrumb .crumb-current:hover { color: var(--text); }
+
+/* Modal */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-overlay);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+#modal-overlay.open { display: flex; }
+#modal {
+  background: var(--modal-bg);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transition: background var(--transition);
+}
+#modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#modal-header .modal-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#modal-header .modal-path {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#modal-close {
+  width: 28px; height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+#modal-close:hover { background: var(--code-bg); color: var(--text); }
+#modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+#modal-body pre {
+  margin: 0;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+#modal-body pre code {
+  font-size: 13px;
+  line-height: 1.5;
+}
+#modal-body .modal-markdown h1 { font-size: 20px; margin: 0 0 12px; }
+#modal-body .modal-markdown h2 { font-size: 17px; margin: 16px 0 8px; }
+#modal-body .modal-markdown p { margin: 0 0 10px; }
+#modal-body .modal-markdown ul, #modal-body .modal-markdown ol { padding-left: 20px; margin: 0 0 10px; }
+#modal-body .modal-markdown a { color: var(--primary); }
+#modal-body .modal-markdown pre { margin: 0 0 12px; border-radius: 6px; overflow-x: auto; }
+#modal-body .modal-markdown code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; }
+#modal-body .modal-markdown blockquote { border-left: 3px solid var(--primary); padding: 4px 12px; margin: 0 0 10px; color: var(--text-secondary); }
+#modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  gap: 8px;
+}
+#modal-error {
+  display: none;
+  padding: 20px;
+  color: #ef4444;
+  text-align: center;
+  background: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+}
+html.dark #modal-error { background: #450a0a; border-color: #7f1d1d; }
+
+/* Empty content for markdown body */
+.body-empty { color: var(--text-secondary); font-style: italic; padding: 40px 0; text-align: center; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  #sidebar { width: 220px; min-width: 220px; }
+  #frontmatter-card { padding: 16px; }
+  #body-content { padding: 16px; }
+  #files-section { padding: 0 16px 16px; }
+  #topbar .logo { display: none; }
+  #topbar .logo-small { display: inline; margin-right: 4px; font-weight: 700; font-size: 14px; color: var(--primary); }
+}
+@media (max-width: 600px) {
+  #sidebar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<header id="topbar">
+  <span class="logo">Skill Visualizer</span>
+  <span class="logo-small">SV</span>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search skills by name or description..." spellcheck="false">
+    <span class="search-icon">&#x1F50D;</span>
+  </div>
+  <button id="theme-toggle" title="Toggle dark mode">&#x1F319;</button>
+</header>
+
+<!-- Main Layout -->
+<div id="app">
+  <aside id="sidebar">
+    <div id="tree"></div>
+  </aside>
+  <main id="content">
+    <div id="empty-state">
+      <div class="empty-icon">&#x1F4E1;</div>
+      <h2>Select a Skill</h2>
+      <p>Choose a skill from the sidebar to view its documentation, frontmatter, and attached files.</p>
+    </div>
+    <div id="skill-view">
+      <div id="frontmatter-card"></div>
+      <div id="body-content"></div>
+      <div id="files-section"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Breadcrumb -->
+<nav id="breadcrumb"></nav>
+
+<!-- File Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-header">
+      <span class="modal-title"></span>
+      <span class="modal-path"></span>
+      <button id="modal-close">&times;</button>
+    </div>
+    <div id="modal-body">
+      <div id="modal-loading">Loading...</div>
+      <div id="modal-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ========== STATE ==========
+  let data = null;
+  let selectedNode = null;
+  let currentHash = '';
+
+  // ========== DOM REFS ==========
+  const treeEl = document.getElementById('tree');
+  const emptyState = document.getElementById('empty-state');
+  const skillView = document.getElementById('skill-view');
+  const frontmatterCard = document.getElementById('frontmatter-card');
+  const bodyContent = document.getElementById('body-content');
+  const filesSection = document.getElementById('files-section');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const searchInput = document.getElementById('search');
+  const themeBtn = document.getElementById('theme-toggle');
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.querySelector('#modal-header .modal-title');
+  const modalPath = document.querySelector('#modal-header .modal-path');
+  const modalBody = document.getElementById('modal-body');
+  const modalLoading = document.getElementById('modal-loading');
+  const modalError = document.getElementById('modal-error');
+  const modalClose = document.getElementById('modal-close');
+
+  // ========== THEME ==========
+  function initTheme() {
+    const saved = localStorage.getItem('sv-theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      themeBtn.innerHTML = '&#x2600;&#xFE0F;';
+    } else {
+      themeBtn.innerHTML = '&#x1F319;';
+    }
+  }
+
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    themeBtn.innerHTML = isDark ? '&#x2600;&#xFE0F;' : '&#x1F319;';
+    localStorage.setItem('sv-theme', isDark ? 'dark' : 'light');
+  }
+
+  // ========== DATA LOADING ==========
+  async function loadData() {
+    try {
+      const res = await fetch('assets/data.json');
+      data = await res.json();
+      renderTree();
+      handleHash();
+    } catch (err) {
+      treeEl.innerHTML = '<div style="padding:16px;color:#ef4444;">Failed to load data.json</div>';
+    }
+  }
+
+  // ========== SEARCH ==========
+  function matchesSkill(node, query) {
+    if (!query) return true;
+    if (node.type !== 'skill' && node.type !== 'agent-doc') return false;
+    const q = query.toLowerCase();
+    const name = ((node.frontmatter && node.frontmatter.name) || node.name || '').toLowerCase();
+    const desc = ((node.frontmatter && node.frontmatter.description) || '').toLowerCase();
+    return name.includes(q) || desc.includes(q);
+  }
+
+  // Returns set of paths of nodes that match the query or contain a matching descendant
+  function collectMatchingPaths(nodes, query, results) {
+    if (!results) results = new Set();
+    for (const node of nodes) {
+      if (node.type === 'file') continue;
+      const selfMatch = matchesSkill(node, query);
+      let childMatch = false;
+      const childNodes = node.children || [];
+      if (childNodes.length > 0) {
+        const before = results.size;
+        collectMatchingPaths(childNodes, query, results);
+        if (results.size > before) childMatch = true;
+      }
+      // Also check files array for agent-doc/skill types
+      if (node.files && node.files.length > 0) {
+        const before = results.size;
+        collectMatchingPaths(node.files, query, results);
+        if (results.size > before) childMatch = true;
+      }
+      if (selfMatch || childMatch) {
+        results.add(node.path);
+      }
+    }
+    return results;
+  }
+
+  // ========== TREE RENDERING ==========
+  function renderTree() {
+    if (!data) return;
+    const query = searchInput.value.trim();
+    let matchingPaths = null;
+    if (query) {
+      matchingPaths = collectMatchingPaths(data.tree, query, new Set());
+    }
+
+    let html = '<ul class="tree-list">';
+    for (const root of data.tree) {
+      html += renderRootNode(root, query, matchingPaths);
+    }
+    html += '</ul>';
+    treeEl.innerHTML = html;
+  }
+
+  function renderRootNode(root, query, matchingPaths) {
+    const totalSkills = countSkillsInNode(root);
+    const expanded = query ? (matchingPaths && matchingPaths.has(root.path)) : false;
+
+    let html = '<li class="root-item">';
+    html += '<div class="root-header" data-type="root" data-path="' + escapeHtml(root.path) + '">';
+    html += '<span class="root-arrow ' + (expanded ? 'expanded' : '') + '">&#x25B6;</span>';
+    html += '<span class="node-label">' + escapeHtml(root.name) + '</span>';
+    html += '<span class="root-badge">' + escapeHtml(root.type) + (totalSkills > 0 ? ' &middot; ' + totalSkills : '') + '</span>';
+    html += '</div>';
+    html += '<div class="tree-children ' + (expanded ? 'open' : '') + '">';
+
+    // Only pre-render children during search (lazy-load for normal browsing)
+    if (expanded) {
+      const children = root.children || [];
+      for (const child of children) {
+        html += renderChildNode(child, query, matchingPaths, 0);
+      }
+    }
+
+    html += '</div></li>';
+    return html;
+  }
+
+  function renderChildNode(node, query, matchingPaths, depth) {
+    if (node.type === 'file') return ''; // skip file nodes in main tree
+
+    if (node.type === 'skill' || node.type === 'agent-doc') {
+      if (query && !(matchingPaths && matchingPaths.has(node.path))) return '';
+      return renderSkillNode(node, depth || 0);
+    }
+
+    if (node.type === 'dir') {
+      return renderDirNode(node, query, matchingPaths, depth || 0);
+    }
+
+    return '';
+  }
+
+  function renderSkillNode(node, depth) {
+    const indent = 24 + (depth || 0) * 12;
+    const label = (node.frontmatter && node.frontmatter.name) || node.name;
+    const icon = node.type === 'agent-doc' ? '&#x1F4C4;' : '&#x1F4D6;';
+    return '<div class="inner-node">' +
+      '<div class="node-header skill-header" data-type="skill" data-path="' + escapeHtml(node.path) + '" style="padding-left:' + indent + 'px">' +
+      '<span class="node-icon">' + icon + '</span>' +
+      '<span class="node-label">' + escapeHtml(label) + '</span>' +
+      '</div></div>';
+  }
+
+  function renderDirNode(node, query, matchingPaths, depth) {
+    const hasVisibleChildren = hasMatchingContent(node, query, matchingPaths);
+    if (query && !hasVisibleChildren) return '';
+
+    const expanded = query ? true : false;
+    const indent = 24 + depth * 12;
+
+    let html = '<div class="inner-node">';
+    html += '<div class="node-header dir-header" data-type="dir" data-path="' + escapeHtml(node.path) + '" style="padding-left:' + indent + 'px">';
+    html += '<span class="node-arrow ' + (expanded ? 'expanded' : '') + '">&#x25B6;</span>';
+    html += '<span class="node-icon">&#x1F4C1;</span>';
+    html += '<span class="node-label">' + escapeHtml(node.name) + '</span>';
+    html += '</div>';
+    html += '<div class="tree-children ' + (expanded ? 'open' : '') + '">';
+
+    // Only pre-render children during search (lazy-load for normal browsing)
+    if (expanded) {
+      const children = node.children || [];
+      for (const child of children) {
+        if (child.type === 'file') continue;
+        html += renderChildNode(child, query, matchingPaths, depth + 1);
+      }
+    }
+
+    html += '</div></div>';
+    return html;
+  }
+
+  function countSkillsInNode(node) {
+    let count = 0;
+    for (const child of (node.children || [])) {
+      if (child.type === 'skill' || child.type === 'agent-doc') count++;
+      if (child.children) count += countSkillsInNode(child);
+    }
+    if (node.files) {
+      for (const file of node.files) {
+        if (file.type === 'skill' || file.type === 'agent-doc') count++;
+        if (file.children) count += countSkillsInNode(file);
+      }
+    }
+    return count;
+  }
+
+  function hasMatchingContent(node, query, matchingPaths) {
+    if (!matchingPaths) return false;
+    function check(n) {
+      if (n.type === 'file') return false;
+      if ((n.type === 'skill' || n.type === 'agent-doc') && matchingPaths.has(n.path)) return true;
+      for (var i = 0; i < (n.children || []).length; i++) {
+        if (check(n.children[i])) return true;
+      }
+      for (var i = 0; i < (n.files || []).length; i++) {
+        if (check(n.files[i])) return true;
+      }
+      return false;
+    }
+    return check(node);
+  }
+
+  // ========== TREE EVENT DELEGATION ==========
+  treeEl.addEventListener('click', function(e) {
+    const header = e.target.closest('.root-header, .node-header');
+    if (!header) return;
+
+    const type = header.dataset.type;
+    const path = header.dataset.path;
+
+    if (type === 'root') {
+      // Toggle expand
+      const arrow = header.querySelector('.root-arrow');
+      const children = header.nextElementSibling;
+      if (children && children.classList.contains('tree-children')) {
+        const isOpen = children.classList.toggle('open');
+        if (arrow) arrow.classList.toggle('expanded', isOpen);
+        // If expanding and no children loaded yet, render them
+        if (isOpen && children.children.length === 0) {
+          const root = findRootByPath(path);
+          if (root) {
+            const query = searchInput.value.trim();
+            const matchingPaths = query ? collectMatchingPaths(data.tree, query, new Set()) : null;
+            let html = '';
+            for (const child of (root.children || [])) {
+              html += renderChildNode(child, query, matchingPaths, 0);
+            }
+            children.innerHTML = html;
+          }
+        }
+      }
+    } else if (type === 'dir') {
+      // Toggle expand
+      const arrow = header.querySelector('.node-arrow');
+      const childrenContainer = header.nextElementSibling;
+      if (childrenContainer && childrenContainer.classList.contains('tree-children')) {
+        const isOpen = childrenContainer.classList.toggle('open');
+        if (arrow) arrow.classList.toggle('expanded', isOpen);
+        // Load children on first expand
+        if (isOpen && childrenContainer.children.length === 0) {
+          const node = findNodeByPath(path);
+          if (node) {
+            const query = searchInput.value.trim();
+            const matchingPaths = query ? collectMatchingPaths(data.tree, query, new Set()) : null;
+            let html = '';
+            const depth = getNodeDepth(node);
+            for (const child of (node.children || [])) {
+              html += renderChildNode(child, query, matchingPaths, depth);
+            }
+            childrenContainer.innerHTML = html;
+          }
+        }
+      }
+    } else if (type === 'skill') {
+      // Select skill
+      selectSkill(path);
+      // Update active state
+      treeEl.querySelectorAll('.node-header.active').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      header.classList.add('active');
+    }
+  });
+
+  function findRootByPath(path) {
+    if (!data) return null;
+    for (const root of data.tree) {
+      if (root.path === path) return root;
+    }
+    return null;
+  }
+
+  function findNodeByPath(path) {
+    if (!data) return null;
+    // Search tree recursively
+    function search(nodes) {
+      for (const node of nodes) {
+        if (node.path === path) return node;
+        if (node.children && node.children.length > 0) {
+          const found = search(node.children);
+          if (found) return found;
+        }
+        if (node.files && node.files.length > 0) {
+          const found = search(node.files);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    return search(data.tree);
+  }
+
+  function getNodeDepth(node) {
+    if (!data) return 0;
+    // Rough depth from path segments, excluding the root segment
+    const segments = (node.path || '').split('/');
+    return Math.max(0, segments.length - 1);
+  }
+
+  // ========== SELECT SKILL ==========
+  function selectSkill(path) {
+    const node = findNodeByPath(path);
+    if (!node) return;
+    selectedNode = node;
+    displaySkill(node);
+    updateBreadcrumb(node);
+    updateHash(path);
+  }
+
+  function displaySkill(node) {
+    emptyState.style.display = 'none';
+    skillView.style.display = 'block';
+
+    // Frontmatter card
+    const fm = node.frontmatter || {};
+    let fmHTML = '<div class="fm-name">' + escapeHtml(fm.name || node.name) + '</div>';
+
+    if (fm.description) {
+      fmHTML += '<div class="fm-description">' + escapeHtml(fm.description) + '</div>';
+    }
+
+    fmHTML += '<div class="fm-meta">';
+    fmHTML += '<span class="fm-badge">' + escapeHtml(node.type) + '</span>';
+    fmHTML += '<span class="fm-path">' + escapeHtml(node.path) + '</span>';
+    fmHTML += '</div>';
+
+    // Extra frontmatter keys
+    const extraKeys = Object.keys(fm).filter(function(k) {
+      return k !== 'name' && k !== 'description';
+    });
+    if (extraKeys.length > 0) {
+      fmHTML += '<div class="fm-extra">';
+      for (const key of extraKeys) {
+        const val = typeof fm[key] === 'object' ? JSON.stringify(fm[key]) : String(fm[key]);
+        fmHTML += '<div><span class="fm-extra-key">' + escapeHtml(key) + ':</span> <span class="fm-extra-val">' + escapeHtml(val) + '</span></div>';
+      }
+      fmHTML += '</div>';
+    }
+
+    frontmatterCard.innerHTML = fmHTML;
+
+    // Body
+    if (node.body && node.body.trim()) {
+      bodyContent.innerHTML = marked.parse(node.body);
+      // Highlight code blocks
+      bodyContent.querySelectorAll('pre code').forEach(function(el) {
+        hljs.highlightElement(el);
+      });
+    } else {
+      bodyContent.innerHTML = '<div class="body-empty">No documentation body.</div>';
+    }
+
+    // Files section
+    renderFiles(node);
+
+    // Scroll to top
+    document.getElementById('content').scrollTop = 0;
+  }
+
+  function renderFiles(node) {
+    const files = node.files || [];
+    if (files.length === 0) {
+      filesSection.innerHTML = '';
+      return;
+    }
+
+    let html = '<h2>Attached Files</h2><div class="files-tree">';
+    for (const f of files) {
+      html += renderFileNodeHTML(f, 0);
+    }
+    html += '</div>';
+    filesSection.innerHTML = html;
+  }
+
+  function renderFileNodeHTML(node, depth) {
+    const indent = depth * 20;
+    if (node.type === 'dir') {
+      let html = '<div class="file-tree-item">';
+      html += '<div class="file-dir-header" style="padding-left:' + indent + 'px" data-type="filedir" data-path="' + escapeHtml(node.path) + '">';
+      html += '<span class="file-arrow">&#x25B6;</span>';
+      html += '<span class="file-icon">&#x1F4C1;</span>';
+      html += '<span>' + escapeHtml(node.name) + '/</span>';
+      html += '</div>';
+      html += '<div class="file-children">';
+      for (const child of (node.children || [])) {
+        if (child.type === 'dir') {
+          html += renderFileNodeHTML(child, depth + 1);
+        } else {
+          html += renderFileLeafHTML(child, depth + 1);
+        }
+      }
+      html += '</div></div>';
+      return html;
+    } else {
+      return renderFileLeafHTML(node, depth);
+    }
+  }
+
+  function renderFileLeafHTML(node, depth) {
+    const indent = depth * 20;
+    let icon = getFileIcon(node.ext || node.name);
+    return '<div class="file-tree-item">' +
+      '<div class="file-leaf" style="padding-left:' + (indent + 20) + 'px" data-type="fileleaf" data-path="' + escapeHtml(node.path) + '" data-ext="' + escapeHtml(node.ext || '') + '">' +
+      '<span class="file-icon">' + icon + '</span>' +
+      '<span>' + escapeHtml(node.name) + '</span>' +
+      '</div></div>';
+  }
+
+  function getFileIcon(ext) {
+    var e = ext.startsWith('.') ? ext.toLowerCase() : (ext.includes('.') ? ext.split('.').pop().toLowerCase() : ext.toLowerCase());
+    if (e === '.md' || e === 'md' || e === '.mdx') return '&#x1F4DD;';
+    if (['.js', '.jsx', '.ts', '.tsx', '.py', '.rb', '.go', '.rs', '.java', '.sh', '.bash'].includes(e)) return '&#x2699;&#xFE0F;';
+    if (['.json', '.yaml', '.yml', '.toml', '.xml', '.cfg', '.ini', '.conf'].includes(e)) return '&#x1F4CB;';
+    if (['.css', '.scss', '.less', '.html', '.svg'].includes(e)) return '&#x1F3A8;';
+    if (['.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp'].includes(e)) return '&#x1F5BC;&#xFE0F;';
+    if (['.pdf'].includes(e)) return '&#x1F4D1;';
+    return '&#x1F4C4;';
+  }
+
+  // ========== FILES SECTION EVENT DELEGATION ==========
+  filesSection.addEventListener('click', function(e) {
+    // File dir expand/collapse
+    var dirHeader = e.target.closest('.file-dir-header');
+    if (dirHeader) {
+      var arrow = dirHeader.querySelector('.file-arrow');
+      var children = dirHeader.nextElementSibling;
+      if (children) {
+        var isOpen = children.classList.toggle('open');
+        if (arrow) arrow.classList.toggle('expanded', isOpen);
+      }
+      return;
+    }
+
+    // File leaf click -> open modal
+    var leaf = e.target.closest('.file-leaf');
+    if (leaf) {
+      var path = leaf.dataset.path;
+      var ext = leaf.dataset.ext;
+      if (path) openFileModal(path, ext);
+    }
+  });
+
+  // ========== BREADCRUMB ==========
+  function updateBreadcrumb(node) {
+    var segments = node.path.split('/');
+    var html = '<span class="crumb" data-path="">&#x1F3E0;</span>';
+    for (var i = 0; i < segments.length; i++) {
+      var partial = segments.slice(0, i + 1).join('/');
+      var isLast = i === segments.length - 1;
+      html += '<span class="crumb-sep">/</span>';
+      if (isLast) {
+        html += '<span class="crumb-current">' + escapeHtml(segments[i]) + '</span>';
+      } else {
+        html += '<span class="crumb" data-path="' + escapeHtml(partial) + '">' + escapeHtml(segments[i]) + '</span>';
+      }
+    }
+    breadcrumb.innerHTML = html;
+  }
+
+  breadcrumb.addEventListener('click', function(e) {
+    var crumb = e.target.closest('.crumb');
+    if (!crumb) return;
+    var path = crumb.dataset.path;
+    if (!path) {
+      // Home - clear selection
+      clearSelection();
+    } else {
+      var node = findNodeByPath(path);
+      if (node && (node.type === 'skill' || node.type === 'agent-doc')) {
+        selectSkill(path);
+      } else {
+        // Just update hash, maybe expand in tree
+        updateHash(path);
+      }
+    }
+  });
+
+  // ========== CLEAR SELECTION ==========
+  function clearSelection() {
+    selectedNode = null;
+    emptyState.style.display = 'flex';
+    skillView.style.display = 'none';
+    breadcrumb.innerHTML = '<span class="crumb" data-path="">&#x1F3E0;</span>';
+    treeEl.querySelectorAll('.node-header.active').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    updateHash('');
+  }
+
+  // ========== HASH ROUTING ==========
+  function updateHash(path) {
+    if (path) {
+      var hash = '#/' + path;
+      if (hash !== currentHash) {
+        currentHash = hash;
+        history.replaceState(null, '', hash);
+      }
+    } else {
+      if (currentHash !== '' && currentHash !== '#') {
+        currentHash = '';
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }
+
+  function handleHash() {
+    var hash = window.location.hash;
+    if (!hash || hash === '#') return;
+    var path = hash.replace(/^#\//, '');
+    if (!path) return;
+    currentHash = hash;
+    var node = findNodeByPath(path);
+    if (node && (node.type === 'skill' || node.type === 'agent-doc')) {
+      selectSkill(path);
+      // Activate in tree
+      treeEl.querySelectorAll('.node-header.active').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      var activeEl = treeEl.querySelector('[data-path="' + path + '"]');
+      if (activeEl) activeEl.classList.add('active');
+      // Expand parent paths
+      expandPathInTree(path);
+    }
+  }
+
+  function expandPathInTree(path) {
+    var segments = path.split('/');
+    // Expand all ancestor roots
+    for (var i = 0; i < segments.length - 1; i++) {
+      var partial = segments.slice(0, i + 1).join('/');
+      var root = findRootByPath(partial);
+      if (root) {
+        // Find root header elements and expand
+        var headers = treeEl.querySelectorAll('[data-path="' + partial + '"]');
+        for (var j = 0; j < headers.length; j++) {
+          var header = headers[j];
+          var type = header.dataset.type;
+          if (type === 'root') {
+            var arrow = header.querySelector('.root-arrow');
+            var children = header.nextElementSibling;
+            if (children && children.classList.contains('tree-children') && !children.classList.contains('open')) {
+              children.classList.add('open');
+              if (arrow) arrow.classList.add('expanded');
+              // Render children
+              if (children.children.length === 0) {
+                var rootNode = findRootByPath(partial);
+                if (rootNode) {
+                  var query = searchInput.value.trim();
+                  var matchingPaths = query ? collectMatchingPaths(data.tree, query, new Set()) : null;
+                  var html = '';
+                  for (var k = 0; k < (rootNode.children || []).length; k++) {
+                    html += renderChildNode(rootNode.children[k], query, matchingPaths, 0);
+                  }
+                  children.innerHTML = html;
+                }
+              }
+            }
+          } else if (type === 'dir') {
+            var arrow2 = header.querySelector('.node-arrow');
+            var children2 = header.nextElementSibling;
+            if (children2 && children2.classList.contains('tree-children') && !children2.classList.contains('open')) {
+              children2.classList.add('open');
+              if (arrow2) arrow2.classList.add('expanded');
+              if (children2.children.length === 0) {
+                var dirNode = findNodeByPath(partial);
+                if (dirNode) {
+                  var query2 = searchInput.value.trim();
+                  var matchingPaths2 = query2 ? collectMatchingPaths(data.tree, query2, new Set()) : null;
+                  var depth2 = getNodeDepth(dirNode);
+                  var html2 = '';
+                  for (var k2 = 0; k2 < (dirNode.children || []).length; k2++) {
+                    html2 += renderChildNode(dirNode.children[k2], query2, matchingPaths2, depth2);
+                  }
+                  children2.innerHTML = html2;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  window.addEventListener('hashchange', handleHash);
+
+  // ========== MODAL ==========
+  async function openFileModal(filePath, ext) {
+    modalOverlay.classList.add('open');
+    modalTitle.textContent = filePath.split('/').pop();
+    modalPath.textContent = filePath;
+    modalLoading.style.display = 'flex';
+    modalError.style.display = 'none';
+    modalBody.querySelectorAll('.modal-markdown, pre, .plain-text').forEach(function(el) {
+      el.remove();
+    });
+
+    try {
+      var url = 'https://raw.githubusercontent.com/1998x-stack/awesome-skills/main/' + filePath;
+      var res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+      var text = await res.text();
+      modalLoading.style.display = 'none';
+
+      var isMd = ext === '.md' || filePath.endsWith('.md') || filePath.endsWith('.mdx');
+      if (isMd) {
+        var div = document.createElement('div');
+        div.className = 'modal-markdown';
+        div.innerHTML = marked.parse(text);
+        div.querySelectorAll('pre code').forEach(function(el) {
+          try { hljs.highlightElement(el); } catch(e) {}
+        });
+        modalBody.appendChild(div);
+      } else {
+        var lang = extToLang(ext || filePath);
+        var pre = document.createElement('pre');
+        var code = document.createElement('code');
+        code.textContent = text;
+        if (lang) code.className = 'language-' + lang;
+        pre.appendChild(code);
+        modalBody.appendChild(pre);
+        try { hljs.highlightElement(code); } catch(e) { /* fallback */ }
+      }
+    } catch (err) {
+      modalLoading.style.display = 'none';
+      modalError.style.display = 'block';
+      modalError.textContent = 'Failed to load file: ' + err.message;
+    }
+  }
+
+  function extToLang(ext) {
+    var m = {
+      '.js': 'javascript', '.jsx': 'javascript', '.ts': 'typescript', '.tsx': 'typescript',
+      '.py': 'python', '.rb': 'ruby', '.go': 'go', '.rs': 'rust', '.java': 'java',
+      '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
+      '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml', '.toml': 'toml', '.xml': 'xml',
+      '.css': 'css', '.scss': 'scss', '.html': 'html', '.svg': 'xml',
+      '.md': 'markdown', '.mdx': 'markdown',
+      '.cfg': 'ini', '.ini': 'ini', '.conf': 'ini',
+      '.txt': 'plaintext'
+    };
+    return m[ext] || null;
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('open');
+  }
+
+  modalClose.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // ========== SEARCH ==========
+  var searchTimeout = null;
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(function() {
+      renderTree();
+    }, 150);
+  });
+
+  // ========== UTILITY ==========
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return String(str || '');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  // ========== INIT ==========
+  initTheme();
+  themeBtn.addEventListener('click', toggleTheme);
+  loadData();
+
+})();
+</script>
+</body>
+</html>
